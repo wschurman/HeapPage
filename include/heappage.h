@@ -19,7 +19,6 @@ protected :
 	};
 
 	short   numOfSlots;	// Number of slots available (maybe filled or empty).
-	short   lastSlot;   // Offset of last slot allocated
 	short   numRecords; // Number of records stored in page, for O(1) sizes.
 	short   freePtr;	// Offset from start of data area, where begins the free space for adding new records.
 	short   freeSpace;	// Amount of free space in bytes in this page.

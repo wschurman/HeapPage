@@ -18,12 +18,14 @@ using namespace std;
 
 void HeapPage::Init(PageID pageNo)
 {
+	cout << "(Start Init) Free Space: " << this->freeSpace << endl;;
 	this->pid = pageNo;
 	this->prevPage = INVALID_PAGE;
 	this->nextPage = INVALID_PAGE;
 	this->numOfSlots = 0; // not sure what this is used for, could be the same as the lastSlot variable I defined.
 	this->freePtr = 0;
 	this->freeSpace = sizeof(data);
+	cout << "(End Init)" << endl;
 }
 
 
@@ -39,21 +41,28 @@ void HeapPage::Init(PageID pageNo)
 
 Status HeapPage::InsertRecord(const char *recPtr, int length, RecordID& rid)
 {
-	if (this->freeSpace < length) return DONE;
+	if (this->freeSpace < length) {
+		cout << "ajajaha" << endl;
+		return DONE;
+	}
 	memcpy(&this->data[this->freePtr], recPtr, length);
+	cout << "Did memcpy" << endl;
 	Slot* f = this->GetFirstSlotPointer();
+	cout << "got f" << endl;
 	int currSlot = 0;
 	while (f->offset == NULL || f->offset > 0) {
 		// go to first free slot, use if free
 		currSlot++;
 		f++;
 	}
+	cout << "using f + " << currSlot << endl;
 	this->FillSlot(f, this->freePtr, length);
 	this->freePtr += length;
 	this->freeSpace -= length;
 	rid.pageNo = this->PageNo();
 	rid.slotNo = currSlot;
-	if (currSlot > this->lastSlot) this->lastSlot++;
+	cout << "Filled slot" << endl;
+	if (currSlot > this->numOfSlots) this->numOfSlots++;
 	this->numRecords++;
 	return OK;
 }
@@ -70,7 +79,8 @@ Status HeapPage::InsertRecord(const char *recPtr, int length, RecordID& rid)
 
 Status HeapPage::DeleteRecord(RecordID rid)
 {
-	if (rid.slotNo > this->lastSlot) return FAIL;
+	return FAIL;
+	if (rid.slotNo > this->numOfSlots) return FAIL;
 	Slot* cur = this->GetFirstSlotPointer() + rid.slotNo;
 	cur->offset = -1; //probably wrong
 	//need to remove actual record from page and rearrange to make new space according to book.
@@ -111,11 +121,13 @@ Status HeapPage::FirstRecord(RecordID& rid)
 
 Status HeapPage::NextRecord(RecordID curRid, RecordID& nextRid)
 {
+	cout << "Got Next from curSlotNo: " << curRid.slotNo << endl;
+	cout << "Total Num of Slots: " << this->numOfSlots << endl; 
 	int newslot = curRid.slotNo + 1;
 	if (newslot > this->numOfSlots) return DONE;
 	nextRid.pageNo = this->PageNo();
 	nextRid.slotNo = newslot;
-	return DONE;
+	return OK;
 }
 
 
