@@ -39,10 +39,7 @@ void HeapPage::Init(PageID pageNo)
 
 Status HeapPage::InsertRecord(const char *recPtr, int length, RecordID& rid)
 {
-	//cout << "Insert Record called" << endl;
-	if(freeSpace < length + sizeof(Slot)) {
-		return DONE;
-	}
+	if(freeSpace < length + sizeof(Slot)) return DONE;
 
 	bool emptySlot = false;
 	Slot *slotPointer = GetFirstSlotPointer();
@@ -71,7 +68,6 @@ Status HeapPage::InsertRecord(const char *recPtr, int length, RecordID& rid)
 
 	rid.pageNo = PageNo();
 	rid.slotNo = currSlot;
-	//numRecords++;
 	return OK;
 }
 
@@ -87,7 +83,6 @@ Status HeapPage::InsertRecord(const char *recPtr, int length, RecordID& rid)
 
 Status HeapPage::DeleteRecord(RecordID rid)
 {
-	//cout << "Deleting slotNo: " << rid.slotNo << endl;
 	if (rid.slotNo >= numOfSlots) return FAIL;
 	Slot* cur = GetFirstSlotPointer() - rid.slotNo;
 	if (SlotIsEmpty(cur)) return FAIL;
@@ -145,10 +140,7 @@ Status HeapPage::FirstRecord(RecordID& rid)
 
 Status HeapPage::NextRecord(RecordID curRid, RecordID& nextRid)
 {
-	//cout << "Got Next from curSlotNo: " << curRid.slotNo << endl;
-	//cout << "Total Num of Slots: " << numOfSlots << endl; 
-	
-	Slot * slotPointer = GetFirstSlotPointer() - curRid.slotNo;
+Slot * slotPointer = GetFirstSlotPointer() - curRid.slotNo;
 	int currSlot = curRid.slotNo;
 	while(currSlot < numOfSlots) {
 		slotPointer--;
@@ -157,9 +149,8 @@ Status HeapPage::NextRecord(RecordID curRid, RecordID& nextRid)
 		if (!SlotIsEmpty(slotPointer)) break;
 	}
 	
-	nextRid.pageNo = pid;
+	nextRid.pageNo = PageNo();
 	nextRid.slotNo = currSlot;
-	//cout << "Got the " << nextRid.slotNo << " slot. " << endl;
 	return OK;
 }
 
@@ -175,15 +166,10 @@ Status HeapPage::NextRecord(RecordID curRid, RecordID& nextRid)
 
 Status HeapPage::GetRecord(RecordID rid, char *recPtr, int& len)
 {
-	//cout << "Get Record called" << endl;
 	int slotno = rid.slotNo;
-	//cout << "Trying to get slotNo: " << slotno << endl;
 	Slot* f = GetFirstSlotPointer() - slotno;
-	if (SlotIsEmpty(f)) {
-		//cout << "Got Empty Slot Ahhhhhh" << endl;
-		return FAIL;
-	}
-	if (slotno >= numOfSlots) return FAIL; // || f->offset < 0
+	if (SlotIsEmpty(f)) return FAIL;
+	if (slotno >= numOfSlots) return FAIL;
 	memcpy(recPtr, &(data[f->offset]), f->length);
 	len = f->length;
 	return OK;
