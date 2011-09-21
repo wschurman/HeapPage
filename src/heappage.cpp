@@ -39,36 +39,40 @@ void HeapPage::Init(PageID pageNo)
 
 Status HeapPage::InsertRecord(const char *recPtr, int length, RecordID& rid)
 {
-	if(freeSpace < length) {
+	cout << "Insert Record called" << endl;
+	if(freeSpace < length + sizeof(Slot)) {
 		return DONE;
 	}
 
-	bool emptySlot = false; 
+	bool emptySlot = false;
 	Slot *slotPointer = GetFirstSlotPointer();
-	int currSlot= 1;
-	while(currSlot <= numOfSlots) { 
-		if((slotPointer->offset == NULL)||(SlotIsEmpty(slotPointer))) { 
-			emptySlot = true; 
-			break;       
+	int currSlot = 0;
+	while(currSlot < numOfSlots) { 
+		if(SlotIsEmpty(slotPointer)) { // (slotPointer->offset == NULL)||
+			emptySlot = true;
+			currSlot++;
+			break;
 		}
 		//slotPointer = slotPointer - sizeof(Slot); 
 		slotPointer--;
-		currSlot=currSlot+1;
+		currSlot++;
     }
 	
 	if(!emptySlot) {
 		numOfSlots++;
-		freeSpace = freeSpace - sizeof(Slot);
+		freeSpace -= sizeof(Slot);
 	}
 
 	FillSlot(slotPointer, freePtr, length);
-	freePtr = freePtr + length;
-
-	memcpy(&data[freePtr], recPtr, length);
+	
+	memcpy(&(data[freePtr]), recPtr, length);
+	assert(slotPointer->offset == freePtr);
+	freeSpace -= length;
+	freePtr += length;
 
 	rid.pageNo = PageNo();
 	rid.slotNo = currSlot;
-	numRecords++;
+	//numRecords++;
 	return OK;
 }
 
@@ -84,13 +88,27 @@ Status HeapPage::InsertRecord(const char *recPtr, int length, RecordID& rid)
 
 Status HeapPage::DeleteRecord(RecordID rid)
 {
-	return FAIL;
-	if (rid.slotNo > this->numOfSlots) return FAIL;
+	if (rid.slotNo >= numOfSlots) return FAIL;
 	Slot* cur = GetFirstSlotPointer() + rid.slotNo;
-	cur->offset = -1; //probably wrong
-	//need to remove actual record from page and rearrange to make new space according to book.
-	//needs to move them, update freeSpace field, etc...
-	//this->numRecords--;
+	
+	memmove(&(data[cur->offset]), &(data[cur->offset+cur->length]), freeSpace-(cur->offset));
+
+	Slot *slotPointer = GetFirstSlotPointer();
+	int currSlot = 0;
+	while(currSlot < numOfSlots) { 
+		if(slotPointer->offset > cur->offset) {
+			slotPointer->length -= cur->length;
+		}
+		slotPointer--;
+		currSlot++;
+	}
+	freeSpace += cur->length;
+	freePtr -= cur->length;
+	SetSlotEmpty(cur);
+	if (rid.slotNo == numOfSlots) {
+		numOfSlots--;
+		freeSpace += sizeof(Slot);
+	}
 	return OK;
 }
 
@@ -109,7 +127,7 @@ Status HeapPage::FirstRecord(RecordID& rid)
 	if (IsEmpty()) return DONE;
 	Slot* f = GetFirstSlotPointer();
 	rid.pageNo = PageNo();
-	rid.slotNo = 1;
+	rid.slotNo = 0;
 	return OK;
 }
 
@@ -127,11 +145,12 @@ Status HeapPage::FirstRecord(RecordID& rid)
 Status HeapPage::NextRecord(RecordID curRid, RecordID& nextRid)
 {
 	cout << "Got Next from curSlotNo: " << curRid.slotNo << endl;
-	cout << "Total Num of Slots: " << this->numOfSlots << endl; 
+	cout << "Total Num of Slots: " << numOfSlots << endl; 
 	int newslot = curRid.slotNo + 1;
-	if (newslot > this->numOfSlots) return DONE;
-	nextRid.pageNo = this->PageNo();
+	if (newslot >= numOfSlots) return DONE;
+	nextRid.pageNo = PageNo();
 	nextRid.slotNo = newslot;
+	cout << "Got the " << nextRid.slotNo << " slot. " << endl;
 	return OK;
 }
 
@@ -147,10 +166,11 @@ Status HeapPage::NextRecord(RecordID curRid, RecordID& nextRid)
 
 Status HeapPage::GetRecord(RecordID rid, char *recPtr, int& len)
 {
+	//cout << "Get Record called" << endl;
 	int slotno = rid.slotNo;
-	Slot* f = this->GetFirstSlotPointer() + slotno;
-	if (slotno > this->numOfSlots || f->offset < 0) return FAIL;
-	memcpy(recPtr, &data[f->offset], f->length);
+	Slot* f = GetFirstSlotPointer() - slotno;
+	if (slotno >= numOfSlots) return FAIL; // || f->offset < 0
+	memcpy(recPtr, &(data[f->offset]), f->length);
 	len = f->length;
 	return OK;
 }
@@ -202,7 +222,7 @@ int HeapPage::AvailableSpace()
 
 bool HeapPage::IsEmpty()
 {
-	return this->numRecords == 0;
+	return false;//numRecords == 0;
 }
 
 //------------------------------------------------------------------
@@ -216,7 +236,8 @@ bool HeapPage::IsEmpty()
 
 int HeapPage::GetNumOfRecords()
 {
-	return this->numRecords;
+	cout << "YO" << endl;
+	return 0;
 }
 
 
