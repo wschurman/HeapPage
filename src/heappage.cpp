@@ -48,7 +48,6 @@ Status HeapPage::InsertRecord(const char *recPtr, int length, RecordID& rid)
 		if(SlotIsEmpty(slotPointer)) {
 			// empty slot found, insert here
 			emptySlot = true;
-			//currSlot++;
 			break;
 		}
 		slotPointer--; //current pointer not to empty so try next one
